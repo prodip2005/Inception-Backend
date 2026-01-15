@@ -222,6 +222,58 @@ async function run() {
         });
 
 
+
+        // ১. জেনারেল ইউজার আপডেট (Edit.jsx এর জন্য)
+        app.patch('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedData = req.body;
+
+            // পাসওয়ার্ড বা সেনসিটিভ কিছু থাকলে সেটা বাদ দিয়ে আপডেট করা ভালো
+            const updateDoc = {
+                $set: {
+                    name: updatedData.name,
+                    institution: updatedData.institution,
+                    role: updatedData.role,
+                    status: updatedData.status,
+                    image: updatedData.image || updatedData.img, // ফ্রন্টএন্ডে যেটা ব্যবহার করেছেন
+                    updatedAt: new Date()
+                }
+            };
+
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+        // ২. জেনারেল ইউজার ডিলিট
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+        // ১. মেম্বার স্ট্যাটাস আপডেট (Approve)
+        app.patch('/users/approve/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: { status: "active" } // স্ট্যাটাস active করে দেয়া হলো
+            };
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+        // ২. মেম্বার রিকোয়েস্ট ডিলিট (Reject)
+        app.delete('/users/reject/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
         // ইমেইল ট্রান্সপোর্টার সেটআপ (পাসওয়ার্ড হিসেবে App Password ব্যবহার করুন)
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -259,6 +311,7 @@ async function run() {
             });
         });
 
+        
         // API 2: ওটিপি চেক এবং ডাটাবেজ সেভ
         app.post('/verify-and-save', async (req, res) => {
             const { email, otp } = req.body;
@@ -266,11 +319,15 @@ async function run() {
 
             if (record && record.otp === otp) {
                 const { otp, ...finalData } = record;
+
+                // এখানে status: "pending" যোগ করা হয়েছে
                 const result = await usersCollection.insertOne({
                     ...finalData,
+                    status: "pending",
                     createdAt: new Date()
                 });
-                delete otpStore[email]; // ব্যবহারের পর মুছে ফেলা
+
+                delete otpStore[email];
                 res.send({ success: true, result });
             } else {
                 res.status(400).send({ success: false, message: 'Invalid OTP Code' });
