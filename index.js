@@ -38,7 +38,8 @@ async function run() {
         const timelineCollection = db.collection('timeline');
         const institutionCollection=db.collection('institutions')
         const peopleCollection=db.collection('peoples')
-        const usersCollection=db.collection('users')
+        const usersCollection = db.collection('users')
+        const adminCollection=db.collection('admins')
 
 
 
@@ -196,7 +197,7 @@ async function run() {
 
 
 
-
+        // USERS DATA
 
         app.post('/users', async (req, res) => {
             const data = req.body;
@@ -333,6 +334,74 @@ async function run() {
                 res.status(400).send({ success: false, message: 'Invalid OTP Code' });
             }
         });
+
+
+
+
+
+        // ADMIN DATA
+
+        // --- ADMIN MANAGEMENT OPERATIONS ---
+
+        // ১. নতুন অ্যাডমিন তৈরি (AddAdmin.jsx এর জন্য)
+        app.post('/admins', async (req, res) => {
+            const data = req.body;
+            const newAdmin = {
+                name: data.name,
+                image: data.image,
+                email: data.gmail,
+                password: data.password,
+                role: 'admin',
+                createdAt: new Date()
+            };
+            const result = await adminCollection.insertOne(newAdmin);
+            res.send(result);
+        });
+
+        // ২. সব অ্যাডমিন ডাটা আনা (ManageAdmins.jsx এর জন্য)
+        app.get('/admins', async (req, res) => {
+            const result = await adminCollection.find().toArray();
+            res.send(result);
+        });
+
+        // ৩. অ্যাডমিন আপডেট করা
+        app.patch('/admins/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedData = req.body;
+            const updateDoc = {
+                $set: {
+                    name: updatedData.name,
+                    image: updatedData.image,
+                    email: updatedData.gmail,
+                    password: updatedData.password,
+                    updatedAt: new Date()
+                }
+            };
+            const result = await adminCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+        // ৪. অ্যাডমিন ডিলিট করা
+        app.delete('/admins/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await adminCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+        // অ্যাডমিন কি না তা চেক করার API
+        app.get('/admins/check/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const isAdmin = await adminCollection.findOne(query);
+            res.send({ isAdmin: !!isAdmin });
+        });
+
+
+
+
 
 
 
